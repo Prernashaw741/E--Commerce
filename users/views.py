@@ -36,10 +36,19 @@ class LoginView(APIView):
 
             user, created = User.objects.get_or_create(email=email, defaults={'first_name': given_name, 'last_name': family_name, 'profile_picture': picture})
 
-            return Response({
+            response = Response({
                 "email": user.email,
                 "name": user.first_name
-            }, status=status.HTTP_201_CREATED)    
+            }, status=status.HTTP_201_CREATED)
+
+            response.set_cookie('uid', user.id)
+            return response
+        
+
+            # return Response({
+            #     "email": user.email,
+            #     "name": user.first_name
+            # }, status=status.HTTP_201_CREATED)    
         
         except Exception as e:
             # Invalid token
