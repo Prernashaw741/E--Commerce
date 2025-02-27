@@ -49,6 +49,9 @@ class OrderListView(generics.ListCreateAPIView):
         order.total_price = total_price 
         order.save()
 
+        if order.status in ["delivered", "cancelled"]:
+            OrderHistory.objects.create(user=order.user, order=order)
+
         return Response({
             "order": OrderSerializer(order).data,
             "items": created_items
