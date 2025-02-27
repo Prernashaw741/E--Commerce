@@ -26,7 +26,6 @@ class Wishlist(models.Model):
         return f"{self.user.email} - {self.product.name}"
 
 
-
 class OrderHistory(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="order_history")
     order = models.ForeignKey('orders.Order', on_delete=models.CASCADE, related_name="user_orders")

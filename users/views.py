@@ -12,7 +12,7 @@ from rest_framework import generics
 
 from orders.permissions import IsOwner
 from orders.serializers import OrderSerializer
-from users.serializers import AddressSerializer
+from users.serializers import AddressSerializer, OrderHistorySerializer
 from .models import Address, OrderHistory
 
 User = get_user_model()
@@ -64,11 +64,11 @@ class LoginView(APIView):
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderHistoryView(generics.ListAPIView):
-    serializer_class = OrderSerializer
+    serializer_class = OrderHistorySerializer
     permission_classes = [IsOwner]
 
     def get_queryset(self):
-        return OrderHistory.objects.filter(user_id=self.request.COOKIES.get("uid"), status__in = ["delivered", "cancelled"]).order_by("-created_at")
+        return OrderHistory.objects.filter(user_id=self.request.COOKIES.get("uid"), order__status__in = ["delivered", "cancelled"]).order_by("-created_at")
 
 
 class AddressListView(generics.ListCreateAPIView):
@@ -83,12 +83,12 @@ class AddressListView(generics.ListCreateAPIView):
         address_data["user"] = User.objects.get(id=request.COOKIES.get("uid")) 
         serializer = AddressSerializer(data=address_data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=address_data["user"])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
+class AddressDetailView(generics.RetrieveUpdateDestroyAPIView): 
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
     permission_classes = [IsOwner]
@@ -99,9 +99,9 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SetDefaultAddressView(APIView):
     permission_classes = [IsOwner]
 
-    def patch(self, request, address_id):
+    def patch(self, request, pk):
         try:
-            address = Address.objects.get(id=address_id, user_id=request.COOKIES.get("uid"))
+            address = Address.objects.get(id=pk, user_id=request.COOKIES.get("uid"))
         except Address.DoesNotExist:
             return Response({"error": "Address not found"}, status=status.HTTP_404_NOT_FOUND)
         

@@ -5,6 +5,7 @@ from django.utils.crypto import get_random_string
 
 from orders.permissions import IsOwner
 from users.admin import User
+from users.models import OrderHistory
 from .models import Order, OrderItem, Payment
 from .serializers import OrderSerializer, OrderItemSerializer, PaymentSerializer
 
@@ -49,8 +50,7 @@ class OrderListView(generics.ListCreateAPIView):
         order.total_price = total_price 
         order.save()
 
-        if order.status in ["delivered", "cancelled"]:
-            OrderHistory.objects.create(user=order.user, order=order)
+       
 
         return Response({
             "order": OrderSerializer(order).data,
@@ -78,6 +78,9 @@ class OrderUpdateStatusView(APIView):
         
         order.status = new_status
         order.save()
+
+        if new_status in ["delivered", "cancelled"]:
+            OrderHistory.objects.create(user=order.user, order=order)
 
         return Response({"message": f"Order status updated {new_status}"}, status=status.HTTP_200_OK)
     
