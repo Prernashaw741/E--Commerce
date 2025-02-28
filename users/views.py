@@ -12,8 +12,9 @@ from rest_framework import generics
 
 from orders.permissions import IsOwner
 from orders.serializers import OrderSerializer
-from users.serializers import AddressSerializer, OrderHistorySerializer
-from .models import Address, OrderHistory
+from users.serializers import AddressSerializer, OrderHistorySerializer, WishlistSerializer
+from .models import Address, OrderHistory, Wishlist
+from products.models import Product
 
 User = get_user_model()
 
@@ -110,6 +111,39 @@ class SetDefaultAddressView(APIView):
         address.save()
         return Response({"message": "Default address updated"}, status=status.HTTP_200_OK)
     
+class WishlistListView(generics.ListCreateAPIView):
+    serializer_class = WishlistSerializer
+    permission_classes = [IsOwner]
 
+    def get_queryset(self):
+        return Wishlist.objects.filter(user_id=self.request.COOKIES.get("uid"))
+    
+    def create(self, request, *args, **kwargs):
+        product_id = request.data.get("product")
+        if not product_id:
+            return Response({"error": "Product ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if Wishlist.objects.filter(user_id=request.COOKIES.get("uid"), product_id=product_id).exists():
+            return Response({"error": "Product already in wishlist"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        wishlist_item = Wishlist.objects.create(user_id=request.COOKIES.get("uid"), product_id=product_id)
+        return Response(WishlistSerializer(wishlist_item).data, status=status.HTTP_201_CREATED)
+    
+class WishlistDeleteView(APIView):
+    permission_classes = [IsOwner]
+        
+    def delete(self, request, pk):
+        try:
+            wishlist_item = Wishlist.objects.get(id=pk, user_id=request.COOKIES.get("uid"))
+        except Wishlist.DoesNotExist:
+            return Response({"error": "Wishlist item not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        wishlist_item.delete()
+        return Response({"message": "Wishlist item deleted"}, status=status.HTTP_204_NO_CONTENT)
            
         

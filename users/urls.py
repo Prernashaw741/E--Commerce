@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import LoginView, OrderHistoryView, AddressDetailView, AddressListView, SetDefaultAddressView
+from .views import LoginView, OrderHistoryView, AddressDetailView, AddressListView, SetDefaultAddressView, WishlistListView, WishlistDeleteView
 
 
 urlpatterns = [
@@ -9,4 +9,6 @@ urlpatterns = [
     path('addresses/', AddressListView.as_view()),
     path('addresses/<int:pk>/', AddressDetailView.as_view()),
     path('addresses/<int:pk>/set-default/', SetDefaultAddressView.as_view()),
+    path("wishlist/", WishlistListView.as_view()),
+    path("wishlist/<int:pk>/", WishlistDeleteView.as_view()),
 ]

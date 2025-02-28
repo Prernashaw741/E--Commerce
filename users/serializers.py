@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Order, Address, OrderHistory
+from .models import Address, OrderHistory, Wishlist
+from products.models import Product
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,3 +14,10 @@ class OrderHistorySerializer(serializers.ModelSerializer):
         fields = ["id", "user", "order", "created_at"]
         read_only_fields = ["user", "order"]
 
+class WishlistSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = Wishlist
+        fields = ["id", "user", "product", "product_name"]
+        read_only_fields = ["user"]
