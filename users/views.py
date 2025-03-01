@@ -15,6 +15,7 @@ from orders.serializers import OrderSerializer
 from users.serializers import AddressSerializer, OrderHistorySerializer, WishlistSerializer
 from .models import Address, OrderHistory, Wishlist
 from products.models import Product
+from .utils import send_email
 
 User = get_user_model()
 
@@ -43,7 +44,18 @@ class LoginView(APIView):
             given_name = idinfo['given_name']
             family_name = idinfo['family_name']
 
-            user, created = User.objects.get_or_create(email=email, defaults={'first_name': given_name, 'last_name': family_name, 'profile_picture': picture})
+            user, created = User.objects.get_or_create(
+                email=email, 
+                defaults={'first_name': given_name, 'last_name': family_name, 'profile_picture': picture}
+            )
+
+            if created:
+                send_email(
+                    subject="Welcome to Our Prerna's E-Commerce Store!",
+                    message=f"Hi {user.first_name},\n\nThank you for signing up with Google! We are so excited to have you. \n\nBest, \nPrerna",
+                    recipient_email = user.email
+                )
+                
 
             response = Response({
                 "email": user.email,

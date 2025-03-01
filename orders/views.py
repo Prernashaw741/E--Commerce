@@ -4,10 +4,14 @@ from rest_framework.views import APIView
 from django.utils.crypto import get_random_string
 
 from orders.permissions import IsOwner
-from users.admin import User
-from users.models import OrderHistory
+
+from users.models import OrderHistory, User
 from .models import Order, OrderItem, Payment
 from .serializers import OrderSerializer, OrderItemSerializer, PaymentSerializer
+from users.utils import send_email
+
+from django.conf import settings
+from django.core.mail import send_mail
 
 
 class OrderListView(generics.ListCreateAPIView):
@@ -20,6 +24,13 @@ class OrderListView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         order_data = request.data
         order_items = order_data.pop("items", [])
+
+        # Fetch user from cookies
+        user_id = request.COOKIES.get("uid")
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Generate a unique order number
         order_number = get_random_string(10).upper()
@@ -50,6 +61,15 @@ class OrderListView(generics.ListCreateAPIView):
         order.total_price = total_price 
         order.save()
 
+        # Send email to user
+        send_email(
+            subject="Order Confirmation",
+            message=f"Hi {user.first_name},\n\nYour order has been placed successfully! Order number: {order_number}\n\nTotal: {total_price}\n\nBest, \nPrerna",
+            from_email = settings.DEFAULT_FROM_EMAIL,
+            recipient_email = order.user.email,
+            fail_silently=False
+        )
+
        
 
         return Response({
@@ -65,6 +85,7 @@ class OrderDetailView(generics.RetrieveAPIView):
 class OrderUpdateStatusView(APIView):
     permission_classes = [IsOwner]
 
+    
     def patch(self, request, order_id):
 
         try:
@@ -72,7 +93,37 @@ class OrderUpdateStatusView(APIView):
         except Order.DoesNotExist:
             return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
         
+        
+        
         new_status = request.data.get("status")
+
+        status_message = {
+            "shipped": "Your order has been shipped! Track it using your order number.",
+            "out for delivery": "Your order is out for delivery! Expect it soon.",
+            "delivered": "Your order has been successfully delivered. Thank you for shopping with us!",
+        }
+
+        
+        # Fetch user from cookies
+        user_id = request.COOKIES.get("uid")
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if new_status in status_message:
+            print("Sending status update email to:", user.email)
+
+            send_email(
+                subject=f"Order {new_status.capitalize()} Notification", 
+                message=f"Hi {user.first_name},\n\n{status_message[new_status]}\n\nOrder Number: {order.order_number}\n\nBest, \nPrerna",
+                from_email = settings.DEFAULT_FROM_EMAIL,
+                recipient_email = user.email,
+                fail_silently=False
+            )
+
+        
+
         if new_status not in dict(Order.STATUS_CHOICES):
             return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -83,6 +134,7 @@ class OrderUpdateStatusView(APIView):
             OrderHistory.objects.create(user=order.user, order=order)
 
         return Response({"message": f"Order status updated {new_status}"}, status=status.HTTP_200_OK)
+    
     
 class OrderItemListView(generics.ListAPIView):
     serializer_class = OrderItemSerializer
