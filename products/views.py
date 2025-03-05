@@ -4,17 +4,29 @@ from rest_framework import status
 from rest_framework.views import APIView
 from .models import Product, Category, ProductVariant
 from .serializers import BulkProductvariantSerializer, ProductSerializer, CategorySerializer, ProductVariantSerializer
+from rest_framework.pagination import PageNumberPagination
+
+
+class ProductPagination(PageNumberPagination):
+    page_size = 2
+    page_size_query_param = 'page_size'
+    max_page_size = 10
 
 class CategoryListView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    pagination_class = ProductPagination
 
 class CategoryDetailView(generics.RetrieveAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
 
+
+
 class ProductListView(generics.ListCreateAPIView):
+
+    pagination_class = ProductPagination
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
@@ -36,6 +48,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     lookup_field = 'slug'
 
 class ProductVariantListView(APIView):
+    pagination_class = ProductPagination
 
     def get(self, request, product_slug, *args, **kwargs):
 
@@ -45,8 +58,10 @@ class ProductVariantListView(APIView):
             return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
         
         variants = ProductVariant.objects.filter(product=product)
-        serializer = ProductVariantSerializer(variants, many=True)
-        return Response(serializer.data)
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(variants, request)
+        serializer = ProductVariantSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
     def post(self, request , *args, **kwargs):
         product_slug = kwargs.get('product_slug')
 
