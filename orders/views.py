@@ -12,6 +12,9 @@ from users.utils import send_email
 
 from django.conf import settings
 from django.core.mail import send_mail
+import razorpay
+
+
 
 
 class OrderListView(generics.ListCreateAPIView):
@@ -154,15 +157,38 @@ class PaymentView(APIView):
         
         if Payment.objects.filter(order=order).exists():
             return Response({"error": "Payment already exists for this order"}, status=status.HTTP_400_BAD_REQUEST)
-        payment_data = request.data
-        payment_data["order"] = order.id
+        # payment_data = request.data
+        # payment_data["order"] = order.id
 
-        serializer = PaymentSerializer(data=payment_data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Payment successful", "payment": serializer.data}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        # serializer = PaymentSerializer(data=payment_data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        #     return Response({"message": "Payment successful", "payment": serializer.data}, status=status.HTTP_201_CREATED)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_SECRET))
+
+        razorpay_order = client.order.create({
+            "amount" : int(order.total_price * 100), 
+            "currency" : "INR",
+            "receipt" : f"order_{order.id}",
+            "payment_capture" : 1
+            })
+        
+        payment = Payment.objects.create(
+            order=order,
+            payment_method="razorpay",
+            transaction_id=razorpay_order["id"],
+            is_successful=False
+        )
+
+        return Response({
+            "razorpay_order_id": razorpay_order["id"],
+            "amount" : order.total_price,
+            "currency" : "INR",
+            "key": settings.RAZORPAY_KEY_ID
+        }, status=status.HTTP_200_OK)
+
     def get(self, request, order_id):
         try:
             payment = Payment.objects.get(order_id=order_id, order__user=request.COOKIES.get("uid"))
@@ -171,3 +197,26 @@ class PaymentView(APIView):
         
         return Response(PaymentSerializer(payment).data, status=status.HTTP_200_OK)
         
+class RazorpayWebhookView(APIView):
+    
+    # Handle Razorpay payment success via webhook
+    
+    def post(self, request, *args, **kwargs):
+        data = request.data
+
+        if "razorpay_payment_id" in data and "razorpay_order_id" in data:
+            payment_id = data["razorpay_payment_id"]
+            order_id = data["razorpay_order_id"]
+            try:
+                payment = Payment.objects.get(transaction_id=order_id)
+            except Payment.DoesNotExist:
+                return Response({"error": "Payment not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            payment.is_successful = True
+            payment.save()
+
+            order = payment.order
+            order.status = "PAID"
+            order.save()
+
+            return Response({"message": "Payment successful"}, status=status.HTTP_200_OK)
