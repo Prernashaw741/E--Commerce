@@ -64,14 +64,14 @@ class OrderListView(generics.ListCreateAPIView):
         order.total_price = total_price 
         order.save()
 
-        # Send email to user
-        send_email(
-            subject="Order Confirmation",
-            message=f"Hi {user.first_name},\n\nYour order has been placed successfully! Order number: {order_number}\n\nTotal: {total_price}\n\nBest, \nPrerna",
-            from_email = settings.DEFAULT_FROM_EMAIL,
-            recipient_email = order.user.email,
-            fail_silently=False
-        )
+        # # Send email to user
+        # send_email(
+        #     subject="Order Confirmation",
+        #     message=f"Hi {user.first_name},\n\nYour order has been placed successfully! Order number: {order_number}\n\nTotal: {total_price}\n\nBest, \nPrerna",
+        #     from_email = settings.DEFAULT_FROM_EMAIL,
+        #     recipient_email = order.user.email,
+        #     fail_silently=False
+        # )
 
        
 
@@ -107,23 +107,23 @@ class OrderUpdateStatusView(APIView):
         }
 
         
-        # Fetch user from cookies
-        user_id = request.COOKIES.get("uid")
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        # # Fetch user from cookies
+        # user_id = request.COOKIES.get("uid")
+        # try:
+        #     user = User.objects.get(id=user_id)
+        # except User.DoesNotExist:
+        #     return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if new_status in status_message:
-            print("Sending status update email to:", user.email)
+        # if new_status in status_message:
+        #     print("Sending status update email to:", user.email)
 
-            send_email(
-                subject=f"Order {new_status.capitalize()} Notification", 
-                message=f"Hi {user.first_name},\n\n{status_message[new_status]}\n\nOrder Number: {order.order_number}\n\nBest, \nPrerna",
-                from_email = settings.DEFAULT_FROM_EMAIL,
-                recipient_email = user.email,
-                fail_silently=False
-            )
+        #     send_email(
+        #         subject=f"Order {new_status.capitalize()} Notification", 
+        #         message=f"Hi {user.first_name},\n\n{status_message[new_status]}\n\nOrder Number: {order.order_number}\n\nBest, \nPrerna",
+        #         from_email = settings.DEFAULT_FROM_EMAIL,
+        #         recipient_email = user.email,
+        #         fail_silently=False
+        #     )
 
         
 
