@@ -33,7 +33,7 @@ class ProductListView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
-    @method_decorator(cache_page(60 * 15,key_prefix= 'product_list'))
+    @method_decorator(cache_page(60 * 60,key_prefix= 'product_list'))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
     

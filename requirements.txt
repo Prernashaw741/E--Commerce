@@ -9,6 +9,6 @@ social-auth-app-django
 google-auth
 razorpay
 django-redis
-redis
+# redis
 celery
-redis[hiredis]
+# redis[hiredis] 
