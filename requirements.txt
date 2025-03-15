@@ -8,3 +8,7 @@ dj-rest-auth
 social-auth-app-django
 google-auth
 razorpay
+django-redis
+redis
+celery
+redis[hiredis]

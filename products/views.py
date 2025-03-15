@@ -1,4 +1,6 @@
 from rest_framework import generics
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -8,7 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 
 
 class ProductPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 5
     page_size_query_param = 'page_size'
     max_page_size = 20
 
@@ -26,9 +28,19 @@ class CategoryDetailView(generics.RetrieveAPIView):
 
 class ProductListView(generics.ListCreateAPIView):
 
-    pagination_class = ProductPagination
+    # pagination_class = ProductPagination
+    pagination_class = None 
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+    @method_decorator(cache_page(60 * 15,key_prefix= 'product_list'))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        import time
+        time.sleep(2) 
+        return super().get_queryset()
 
     def create(self, request, *args, **kwargs):
         """
@@ -49,6 +61,15 @@ class ProductDetailView(generics.RetrieveAPIView):
 
 class ProductVariantListView(APIView):
     pagination_class = ProductPagination
+
+    @method_decorator(cache_page(60 * 15,key_prefix= 'product_list'))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        import time
+        time.sleep(2) 
+        return super().get_queryset()
 
     def get(self, request, product_slug, *args, **kwargs):
 
