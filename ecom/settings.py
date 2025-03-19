@@ -219,3 +219,6 @@ CACHES = {
 #     }
 # }
 
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
+CELERY__ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'

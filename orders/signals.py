@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from users.thread_local import get_current_user
 from .models import Order, OrderItem
+from users.tasks import send_email_task
 
 
 # Send email when an order is created
@@ -15,13 +16,14 @@ def order_created(sender, instance, created, **kwargs):
         if user:
             subject = "Order Confirmation"
             message = f"Thank you {user.first_name}, your order {instance.order_number} has been placed successfully!"
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+            # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+            send_email_task.delay(subject, message, instance.user.email)
 
 # Send email when an order status is updated
 @receiver(post_save, sender=Order)
 def send_order_status_update_email(sender, instance, **kwargs):
     status_message = {
-        "shipped": "Your order has been shipped! Track it using your order number.",
+        "shipped": Your order has been shipped! Track it using your order number.",
         "out for delivery": "Your order is out for delivery! Expect it soon.",
         "delivered": "Your order has been successfully delivered. Thank you for shopping with us!",
     }
