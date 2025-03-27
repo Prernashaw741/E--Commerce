@@ -39,6 +39,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework.authtoken',
+    'channels',
     
     
     # Custom Apps
@@ -56,6 +58,8 @@ INSTALLED_APPS = [
     'products',
     'users'
 ]
+
+
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -117,6 +121,9 @@ DJOSER = {
 }
 
 SITE_ID = 1
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -222,3 +229,14 @@ CACHES = {
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
 CELERY__ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+
+ASGI_APPLICATION = 'ecom.asgi.application'
+CHANNEL_LAYERS = {
+    'defualt': {
+        'BACKEND' : 'channels_redis.core.RedisChannelLayer',
+        'CONFIG' : {
+            'hosts': [("127.0.0.1", 6379)],
+        },
+    },
+}

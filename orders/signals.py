@@ -7,6 +7,9 @@ from users.thread_local import get_current_user
 from .models import Order, OrderItem
 from users.tasks import send_email_task
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 
 # Send email when an order is created
 @receiver(post_save, sender=Order)
@@ -22,8 +25,17 @@ def order_created(sender, instance, created, **kwargs):
 # Send email when an order status is updated
 @receiver(post_save, sender=Order)
 def send_order_status_update_email(sender, instance, **kwargs):
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            f"order_{instance.id}",
+            {
+                "type": "order.update",
+                "message": f"Your order status has been updated to {instance.status}."
+            }
+        )
     status_message = {
-        "shipped": Your order has been shipped! Track it using your order number.",
+        "shipped": "Your order has been shipped! Track it using your order number.",
         "out for delivery": "Your order is out for delivery! Expect it soon.",
         "delivered": "Your order has been successfully delivered. Thank you for shopping with us!",
     }
@@ -50,3 +62,14 @@ def check_and_update_product_stock(sender, instance, **kwargs):
     # Reduce stock only if validation passes
     instance.product.stock -= instance.quantity
     instance.product.save()
+
+
+# channel_layer = get_channel_layer()
+
+# async_to_sync(channel_layer.group_send)(
+#     f"order_{Order.id}",
+#     {
+#         "type": "order.update",
+#         "message": f"Your order status has been updated to {Order.status}."
+#     }
+# )
